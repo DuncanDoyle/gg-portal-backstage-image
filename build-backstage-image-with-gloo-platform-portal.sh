@@ -32,6 +32,20 @@ yq -i '.backend.csp += {"upgrade-insecure-requests": false}' app-config.yaml
 echo "Patching app-config.yaml file to allow 'blob:' in content security policy.\n"
 yq -i '.backend.csp.connect-src += ["blob: "]' app-config.yaml
 
+# Doing this with sed, as I can't find the proper yq command to format this correctly ...
+echo "Patching app-config yaml file to add content security policy worker source configuration.\n"
+sed <<EOF -i'.prepatch' -e '/connect-src/ a\
+    worker-src: ["'"'self'"'", '"'blob: '"']\
+    script-src: ["'"'self'"'", '"'blob: '"']\
+    object-src: ["'"'self'"'", '"'blob: '"']\
+    img-src: ["'"'self'"'", '"'blob: '"']
+' app-config.yaml
+EOF
+rm app-config.yaml.prepatch
+
+
+
+
 echo "Patching app-config.yaml file to add PostgreSQL configuration.\n"
 yq -i '.backend += {"database": {"client": "pg", "connection": { "host": "${POSTGRES_SERVICE_HOST}", "port": "${POSTGRES_SERVICE_PORT}", "user": "${POSTGRES_USER}", "password": "${POSTGRES_PASSWORD}"}}}' app-config.yaml
 
