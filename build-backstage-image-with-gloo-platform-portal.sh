@@ -33,22 +33,16 @@ echo "Patching app-config.yaml file to allow 'blob:' in content security policy.
 yq -i '.backend.csp.connect-src += ["blob: "]' app-config.yaml
 
 # Doing this with sed, as I can't find the proper yq command to format this correctly ...
-echo "Patching app-config yaml file to add content security policy worker source configuration.\n"
+echo "Patching app-config yaml file to add content security policy script source configuration.\n"
 sed <<EOF -i'.prepatch' -e '/connect-src/ a\
-    worker-src: ["'"'self'"'", '"'blob: '"']\
-    script-src: ["'"'self'"'", '"'blob: '"']\
-    object-src: ["'"'self'"'", '"'blob: '"']\
-    img-src: ["'"'self'"'", '"'blob: '"']
+    script-src: ["'"'self'"'", '"'blob: '"']
 ' app-config.yaml
 EOF
+# Removing the backup file that is created.
 rm app-config.yaml.prepatch
-
-
-
 
 echo "Patching app-config.yaml file to add PostgreSQL configuration.\n"
 yq -i '.backend += {"database": {"client": "pg", "connection": { "host": "${POSTGRES_SERVICE_HOST}", "port": "${POSTGRES_SERVICE_PORT}", "user": "${POSTGRES_USER}", "password": "${POSTGRES_PASSWORD}"}}}' app-config.yaml
-
 
 ############# Add Gloo Platform Portal Backstage plugin #############
 
@@ -68,7 +62,6 @@ import {\
 } from "@solo.io/dev-portal-backstage-plugin";
 ' App.tsx
 EOF
-
 # Removing the backup file that is created.
 rm App.tsx.orig
 
@@ -86,7 +79,6 @@ sed <<EOF -i'.orig' -e '/<\/FlatRoutes>/ i\
     />
 ' App.tsx 
 EOF
-
 # Removing the backup file that is created.
 rm App.tsx.orig
 
@@ -100,10 +92,8 @@ sed <<EOF -i'.orig' -e '1 i\
 import { GlooIcon } from "@solo.io/dev-portal-backstage-plugin";
 ' Root.tsx
 EOF
-
 # Removing the backup file that is created.
 rm Root.tsx.orig
-
 
 echo "Add Gloo routes to <SidebarScrollWrapper> element in Root.tsx backstage file.\n"
 # Use sed to add element to <SidebarScrollWrapper> in Root.tsx.
@@ -112,7 +102,6 @@ sed <<EOF -i'.orig' -e '/<\/SidebarScrollWrapper>/ i\
           <SidebarItem icon={GlooIcon} to="gloo-platform-portal" text="Gloo Portal" />
 ' Root.tsx 
 EOF
-
 # Removing the backup file that is created.
 rm Root.tsx.orig
 
@@ -121,7 +110,6 @@ popd
 echo "Add Gloo Platform Portal plugin configuration options to Backstage app-config.yaml.\n"
 #yq -i '. += {"glooPlatformPortal": {"portalServerUrl": "http://developer.example.com/portal-server/v1/", "clientId": "${CLIENT_ID}", "clientSecret": "${CLIENT_SECRET}", "tokenEndpoint": "http://keycloak.example.com:8080/realms/master/protocol/openid-connect/token", "authEndpoint": "http://keycloak.example.com:8080/realms/master/protocol/openid-connect/auth", "logoutEndpoint": "http://keycloak.example.com:8080/realms/master/protocol/openid-connect/logout"}} | .glooPlatformPortal.portalServerUrl style="double" | .glooPlatformPortal.tokenEndpoint style="double" | .glooPlatformPortal.authEndpoint style="double" | .glooPlatformPortal.logoutEndpoint style="double"' app-config.yaml
 yq -i '. += {"glooPlatformPortal": {"portalServerUrl": "${PORTAL_SERVER_URL}", "clientId": "${CLIENT_ID}", "clientSecret": "${CLIENT_SECRET}", "tokenEndpoint": "${TOKEN_ENDPOINT}", "authEndpoint": "${AUTH_ENDPOINT}", "logoutEndpoint": "${LOGOUT_ENDPOINT}"}} ' app-config.yaml
-
 
 echo "Copy app-config.yaml configuration file to backend directory."
 cp app-config.yaml packages/backend
