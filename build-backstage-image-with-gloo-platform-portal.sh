@@ -13,10 +13,13 @@ DOCKER_IMAGE_TAG=$1
 echo "Source nvm.sh to make nvm available to our script.\n"
 . ~/.nvm/nvm.sh
 
-echo "Set Yarn and NVM versions.\n"
+echo "Set NVM version.\n"
 
-yarn set version 1.22.19
+# yarn set version 1.22.19
 nvm use 18
+
+echo "Delete backstage application directory if it exists.\n"
+rm -rf backstage
 
 echo "Bootstrap backstage project.\n"
 npx @backstage/create-app@latest
@@ -35,7 +38,8 @@ yq -i '.backend.csp.connect-src += ["blob: "]' app-config.yaml
 # Doing this with sed, as I can't find the proper yq command to format this correctly ...
 echo "Patching app-config yaml file to add content security policy script source configuration.\n"
 sed <<EOF -i'.prepatch' -e '/connect-src/ a\
-    script-src: ["'"'self'"'", '"'blob: '"']
+    script-src: ["'"'self'"'", '"'blob: '"', "'"'unsafe-eval'"'"]\
+    img-src: ["'"'self'"'", '"'data:'"', '"'https://cdn.redoc.ly/redoc/logo-mini.svg'"']
 ' app-config.yaml
 EOF
 # Removing the backup file that is created.
@@ -109,7 +113,7 @@ popd
 
 echo "Add Gloo Platform Portal plugin configuration options to Backstage app-config.yaml.\n"
 #yq -i '. += {"glooPlatformPortal": {"portalServerUrl": "http://developer.example.com/portal-server/v1/", "clientId": "${CLIENT_ID}", "clientSecret": "${CLIENT_SECRET}", "tokenEndpoint": "http://keycloak.example.com:8080/realms/master/protocol/openid-connect/token", "authEndpoint": "http://keycloak.example.com:8080/realms/master/protocol/openid-connect/auth", "logoutEndpoint": "http://keycloak.example.com:8080/realms/master/protocol/openid-connect/logout"}} | .glooPlatformPortal.portalServerUrl style="double" | .glooPlatformPortal.tokenEndpoint style="double" | .glooPlatformPortal.authEndpoint style="double" | .glooPlatformPortal.logoutEndpoint style="double"' app-config.yaml
-yq -i '. += {"glooPlatformPortal": {"portalServerUrl": "${PORTAL_SERVER_URL}", "clientId": "${CLIENT_ID}", "clientSecret": "${CLIENT_SECRET}", "tokenEndpoint": "${TOKEN_ENDPOINT}", "authEndpoint": "${AUTH_ENDPOINT}", "logoutEndpoint": "${LOGOUT_ENDPOINT}"}} ' app-config.yaml
+yq -i '. += {"glooPlatformPortal": {"portalServerUrl": "${PORTAL_SERVER_URL}", "clientId": "${CLIENT_ID}", "tokenEndpoint": "${TOKEN_ENDPOINT}", "authEndpoint": "${AUTH_ENDPOINT}", "logoutEndpoint": "${LOGOUT_ENDPOINT}"}} ' app-config.yaml
 
 echo "Copy app-config.yaml configuration file to backend directory."
 cp app-config.yaml packages/backend
@@ -132,6 +136,9 @@ echo "Build the Backstage application.\n"
 yarn build:backend --config app-config.yaml
 
 echo "Generate the Docker image.\n"
-yarn build-image --tag backstage:$DOCKER_IMAGE_TAG
+#yarn build-image --tag backstage:$DOCKER_IMAGE_TAG
+# Not using yarn build-image, as we want to do a multi-arch build.
 
-echo "Backstage Docker image created successfully with name 'backstage' and tag '$DOCKER_IMAGE_TAG'.\n"
+docker buildx build -f packages/backend/Dockerfile --platform linux/amd64,linux/arm64 --push -t duncandoyle/backstage-gloo -t duncandoyle/backstage-gloo:$DOCKER_IMAGE_TAG .
+
+echo "Backstage Docker image created successfully with name 'backstage-gloo' and tag '$DOCKER_IMAGE_TAG'.\n"
