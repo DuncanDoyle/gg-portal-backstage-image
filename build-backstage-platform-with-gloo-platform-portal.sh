@@ -274,7 +274,14 @@ yq -i '. +=
               "authProvider": "serviceAccount",
               "skipTLSVerify": "${KUBERNETES_SKIP_TLS_VERIFY}",
               "skipMetricsLookup": "true",
-              "serviceAccountToken": "${KUBERNETES_SERVICE_ACCOUNT_TOKEN}"
+              "serviceAccountToken": "${KUBERNETES_SERVICE_ACCOUNT_TOKEN}",
+              "customResources": [
+                {
+                  "group": "networking.gloo.solo.io",
+                  "apiVersion": "v2",
+                  "plural": "routetables"
+                }
+              ]
             }
           ]
         }
