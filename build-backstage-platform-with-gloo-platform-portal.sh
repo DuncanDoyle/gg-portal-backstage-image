@@ -6,7 +6,7 @@ echo "Source nvm.sh to make nvm available to our script.\n"
 
 echo "Set NVM version.\n"
 
-# yarn set version 1.22.19
+# yarn set version 1.22.1
 nvm use 18
 # nvm use 16
 
@@ -14,9 +14,18 @@ echo "Delete backstage application directory if it exists.\n"
 rm -rf backstage
 
 echo "Bootstrap backstage project.\n"
-npx @backstage/create-app@latest
+# npx @backstage/create-app@latest
+# Installs Backstage 1.17.x
+npx @backstage/create-app@0.5.4
 
 pushd backstage
+
+echo "Backup up original package.json file.\n"
+cp package.json package.json.orig
+
+echo "Patching package.json file to set swagger-ui version. See: https://github.com/backstage/backstage/issues/22142"
+jq '.resolutions +={"swagger-ui-react": "5.10.5"}' package.json > package.json.tmp
+mv package.json.tmp package.json
 
 echo "Backing up original app-config.yaml file.\n"
 cp app-config.yaml app-config.yaml.orig
@@ -205,7 +214,7 @@ popd
 
 echo "Adding Kubernetes Backend Backstage Plugin.\n"
 
-yarn add --cwd packages/backend @backstage/plugin-kubernetes-backend
+yarn add --cwd packages/backend "@backstage/plugin-kubernetes-backend@^0.11.5"
 
 pushd packages/backend/src/plugins
 
@@ -280,6 +289,16 @@ yq -i '. +=
                   "group": "networking.gloo.solo.io",
                   "apiVersion": "v2",
                   "plural": "routetables"
+                },
+                {
+                  "group": "gateway.networking.k8s.io",
+                  "apiVersion": "v1beta1",
+                  "plural": "httproutes"
+                },
+                {
+                  "group": "apimanagement.gloo.solo.io",
+                  "apiVersion": "v2",
+                  "plural": "apiproducts"
                 }
               ]
             }
